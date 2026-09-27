@@ -1,0 +1,1694 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>অ্যাডমিন প্যানেল | মাদরাসা আসিম বিন সাবিত (রা.)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Bengali:wght@300;400;500;600;700;800;900&family=Amiri:wght@400;700&family=Playfair+Display:wght@600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+<script>
+if (!window.XLSX) {
+  document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"><\/script>');
+}
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<style>
+  body { background: var(--cream); }
+  .admin-page { min-height: 100vh; display: flex; flex-direction: column; }
+  .admin-login {
+    max-width: 420px; margin: 80px auto; padding: 40px;
+    background: #fff; border-radius: 24px; box-shadow: var(--shadow-xl);
+    border: 1px solid var(--border);
+  }
+  .admin-login h1 { text-align: center; color: var(--green-800); margin-bottom: 8px; font-family: var(--font-display); }
+  .admin-login p { text-align: center; color: var(--muted); margin-bottom: 28px; }
+  .admin-main { padding: 20px 22px !important; }
+  .admin-card { padding: 18px 20px !important; margin-bottom: 14px !important; }
+  .admin-card h4 { margin-bottom: 12px !important; padding-bottom: 10px !important; }
+  .admin-stats { gap: 12px !important; margin-bottom: 16px !important; }
+  .admin-stat { padding: 14px !important; }
+  .admin-stat .n { font-size: 1.55rem !important; }
+  .field { margin-bottom: 14px !important; }
+  .admin-form-grid { gap: 12px !important; }
+  .import-box { padding: 14px !important; margin-bottom: 12px !important; }
+  .import-box {
+    border: 2px dashed var(--border);
+    border-radius: 16px;
+    padding: 20px;
+    background: linear-gradient(135deg, var(--cream-2), var(--cream));
+    margin-bottom: 18px;
+    transition: all .3s;
+  }
+  .import-box:hover { border-color: var(--emerald); background: rgba(24,181,116,.04); }
+  .import-box label { cursor: pointer; display: block; text-align: center; }
+  .import-hint { font-size: .82rem; color: var(--muted); margin-top: 8px; line-height: 1.5; }
+  .import-hint code { background: rgba(13,112,67,.08); padding: 1px 6px; border-radius: 4px; font-size: .78rem; }
+</style>
+</head>
+<body>
+<div id="loginScreen" class="admin-page" style="display:none">
+  <div class="admin-login">
+    <div style="text-align:center;font-size:3rem;margin-bottom:12px">🔐</div>
+    <h1>অ্যাডমিন লগইন</h1>
+    <p>মাদরাসা আসিম বিন সাবিত (রা.)</p>
+    <div class="field">
+      <label>পাসওয়ার্ড</label>
+      <input type="password" id="adminPass" placeholder="পাসওয়ার্ড লিখুন" onkeydown="if(event.key==='Enter') doLogin()">
+    </div>
+    <button class="btn btn-primary btn-block btn-lg" onclick="doLogin()">প্রবেশ করুন</button>
+    <div style="text-align:center;margin-top:20px">
+      <a href="index.html" style="color:var(--muted);font-size:.9rem">← ওয়েবসাইটে ফিরে যান</a>
+    </div>
+  </div>
+</div>
+
+<div id="adminApp" style="display:none">
+  <div class="admin-overlay open" style="position:relative;inset:auto;background:transparent;backdrop-filter:none;z-index:1;display:flex;min-height:100vh;padding:0">
+    <div class="admin-modal" style="max-width:100%;max-height:none;border-radius:0;box-shadow:none;border:none;height:100vh">
+      <div class="admin-head">
+        <h2 id="adminTitle">🔐 অ্যাডমিন প্যানেল</h2>
+        <div style="position:relative;z-index:2;font-family:var(--font-display);font-size:.72rem;letter-spacing:1.5px;text-transform:uppercase;color:var(--gold-300);font-weight:800;padding:6px 14px;border-radius:50px;background:rgba(212,175,55,.15);border:1px solid rgba(212,175,55,.35)">Created By Ariful Islam + Muhabbit</div>
+        <div style="display:flex;gap:10px;align-items:center">
+          <a href="index.html" class="btn btn-light-outline btn-sm" style="padding:8px 16px">🏠 ওয়েবসাইট</a>
+          <button class="admin-close" onclick="adminLogout()" title="লগআউট">🚪</button>
+        </div>
+      </div>
+      <div class="admin-body">
+        <div class="admin-side" id="adminSide"></div>
+        <div class="admin-main" id="adminMain"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="edit-overlay" id="editOverlay">
+  <div class="edit-modal">
+    <div class="edit-modal-head">
+      <h4 id="editTitle">সম্পাদনা</h4>
+      <button class="admin-close" onclick="closeEdit()">✕</button>
+    </div>
+    <div class="edit-modal-body" id="editBody"></div>
+    <div class="edit-modal-foot">
+      <button class="btn btn-outline btn-sm" onclick="closeEdit()">বাতিল</button>
+      <button class="btn btn-primary btn-sm" id="editSaveBtn">💾 সংরক্ষণ</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="assets/db.js"></script>
+<script src="assets/common.js"></script>
+<script>
+let adminTab = 'dashboard';
+let tempTeacherPhoto = '';
+let subjCounter = 0;
+let editSaveCallback = null;
+
+function isLoggedIn() {
+  return sessionStorage.getItem(AUTH_KEY) === '1';
+}
+
+function doLogin() {
+  const pass = document.getElementById('adminPass').value;
+  if (pass === ADMIN_PASSWORD) {
+    sessionStorage.setItem(AUTH_KEY, '1');
+    showAdmin();
+    toast('স্বাগতম, অ্যাডমিন!', 'gold');
+  } else {
+    toast('ভুল পাসওয়ার্ড!', 'err');
+  }
+}
+
+function adminLogout() {
+  sessionStorage.removeItem(AUTH_KEY);
+  location.reload();
+}
+
+function showAdmin() {
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('adminApp').style.display = 'block';
+  renderAdmin();
+}
+
+function showLogin() {
+  document.getElementById('loginScreen').style.display = 'block';
+  document.getElementById('adminApp').style.display = 'none';
+}
+
+const ADMIN_TABS = [
+  {id:'dashboard', label:'📊 ড্যাশবোর্ড'},
+  {id:'general',   label:'⚙️ সাধারণ তথ্য'},
+  {id:'branding',  label:'🎨 লোগো'},
+  {id:'students',  label:'👨‍🎓 শিক্ষার্থী'},
+  {id:'teachers',  label:'👨‍🏫 শিক্ষক'},
+  {id:'results',   label:'📋 ফলাফল'},
+  {id:'notices',   label:'📢 নোটিশ'},
+  {id:'classes',   label:'🏫 শ্রেণি ও বছর'},
+  {id:'admission', label:'📝 ভর্তি তথ্য'},
+  {id:'grading',   label:'🎯 গ্রেডিং'},
+  {id:'backup',    label:'💾 ব্যাকআপ'}
+];
+
+/* =========================================================
+   Excel / PDF Import System
+   ========================================================= */
+function normalizeHeader(h) {
+  let s = String(h || '').trim().toLowerCase()
+    .replace(/\uFEFF/g, '')
+    .replace(/[\s_\-\.\/]+/g, '');
+  // Keep original cleaned for matching; aliases handled in mapRow
+  return s;
+}
+
+function headerMatches(normalizedKey, aliases) {
+  const nk = normalizedKey;
+  for (const a of aliases) {
+    const aa = String(a).toLowerCase().replace(/[\s_\-\.\/]+/g, '');
+    if (!aa) continue;
+    if (nk === aa || nk.includes(aa) || aa.includes(nk)) return true;
+  }
+  return false;
+}
+
+function readExcelFile(file) {
+  return new Promise((resolve, reject) => {
+    const name = (file.name || '').toLowerCase();
+    const mime = (file.type || '').toLowerCase();
+    const isCsv = name.endsWith('.csv') || name.endsWith('.txt') || mime.includes('csv') || mime.includes('text/plain');
+
+    function parseWithXLSX(data, type, opts) {
+      if (!window.XLSX) throw new Error('Excel লাইব্রেরি লোড হয়নি। ইন্টারনেট চালু করে পেজ রিফ্রেশ করুন।');
+      const wb = XLSX.read(data, Object.assign({ type: type, cellDates: true, codepage: 65001 }, opts || {}));
+      if (!wb.SheetNames || !wb.SheetNames.length) throw new Error('শিট পাওয়া যায়নি');
+      const sheet = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(sheet, { defval: '', raw: false });
+      return rows;
+    }
+
+    function parseCsvText(text) {
+      if (!text || !String(text).trim()) throw new Error('ফাইল খালি');
+      text = String(text);
+      if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
+      const firstLine = (text.split(/\r?\n/).find(l => l.trim()) || '');
+      const commas = (firstLine.match(/,/g) || []).length;
+      const semis = (firstLine.match(/;/g) || []).length;
+      const tabs = (firstLine.match(/\t/g) || []).length;
+      let sep = ',';
+      if (semis > commas && semis >= tabs) sep = ';';
+      else if (tabs > commas && tabs >= semis) sep = '\t';
+      // Prefer SheetJS
+      if (window.XLSX) {
+        try {
+          return parseWithXLSX(text, 'string', { FS: sep });
+        } catch (e1) {
+          try { return parseWithXLSX(text, 'string'); } catch (e2) {}
+        }
+      }
+      // Manual CSV (handles quoted fields simply)
+      const lines = text.split(/\r?\n/).filter(l => l.trim());
+      if (!lines.length) return [];
+      function splitLine(line) {
+        const out = [];
+        let cur = '', inQ = false;
+        for (let i = 0; i < line.length; i++) {
+          const ch = line[i];
+          if (ch === '"') {
+            if (inQ && line[i+1] === '"') { cur += '"'; i++; }
+            else inQ = !inQ;
+          } else if (ch === sep && !inQ) {
+            out.push(cur); cur = '';
+          } else cur += ch;
+        }
+        out.push(cur);
+        return out.map(x => x.trim());
+      }
+      const headers = splitLine(lines[0]);
+      return lines.slice(1).map(line => {
+        const cols = splitLine(line);
+        const obj = {};
+        headers.forEach((h, i) => { obj[h] = cols[i] || ''; });
+        return obj;
+      });
+    }
+
+    if (isCsv) {
+      const reader = new FileReader();
+      reader.onload = e => {
+        try {
+          const rows = parseCsvText(e.target.result);
+          if (!rows.length) reject(new Error('CSV-তে কোনো ডেটা নেই'));
+          else resolve(rows);
+        } catch (err) { reject(err); }
+      };
+      reader.onerror = () => reject(new Error('CSV পড়া যায়নি'));
+      reader.readAsText(file, 'UTF-8');
+      return;
+    }
+
+    // Excel binary
+    const reader = new FileReader();
+    reader.onload = e => {
+      try {
+        const data = new Uint8Array(e.target.result);
+        const rows = parseWithXLSX(data, 'array');
+        if (!rows.length) {
+          // maybe misdetected csv
+          const reader2 = new FileReader();
+          reader2.onload = e2 => {
+            try {
+              const rows2 = parseCsvText(e2.target.result);
+              if (!rows2.length) reject(new Error('ফাইলে কোনো ডেটা নেই'));
+              else resolve(rows2);
+            } catch (err2) { reject(err2); }
+          };
+          reader2.onerror = () => reject(new Error('ফাইল পড়া যায়নি'));
+          reader2.readAsText(file, 'UTF-8');
+          return;
+        }
+        resolve(rows);
+      } catch (err) {
+        const reader2 = new FileReader();
+        reader2.onload = e2 => {
+          try { resolve(parseCsvText(e2.target.result)); }
+          catch (err2) { reject(err); }
+        };
+        reader2.onerror = () => reject(err);
+        reader2.readAsText(file, 'UTF-8');
+      }
+    };
+    reader.onerror = () => reject(new Error('ফাইল পড়া যায়নি'));
+    reader.readAsArrayBuffer(file);
+  });
+}
+
+function mapRow(row, fieldMap) {
+  const out = {};
+  const keys = Object.keys(row || {});
+  for (const [target, aliases] of Object.entries(fieldMap)) {
+    for (const k of keys) {
+      const nk = normalizeHeader(k);
+      if (headerMatches(nk, aliases)) {
+        out[target] = String(row[k] ?? '').trim();
+        break;
+      }
+    }
+  }
+  return out;
+}
+
+async function importStudentsFromExcel(file) {
+  const rows = await readExcelFile(file);
+  if (!rows.length) { toast('Excel-এ কোনো ডেটা নেই', 'err'); return; }
+  const fieldMap = {
+    name: ['name', 'নাম', 'studentname', "student'sname", 'student'],
+    father: ['father', 'পিতা', 'fathername', "father'sname"],
+    class: ['class', 'শ্রেণি', 'শ্রেণী', 'grade'],
+    roll: ['roll', 'রোল', 'rollnumber', 'rollno'],
+    studentId: ['id', 'studentid', 'আইডি', 'aid', 'sid'],
+    year: ['year', 'বছর', 'শিক্ষাবর্ষ', 'session', 'academicyear']
+  };
+  let added = 0;
+  rows.forEach(row => {
+    const m = mapRow(row, fieldMap);
+    if (!m.name || (!m.roll && !m.studentId)) return;
+    const sid = m.studentId || m.roll;
+    const exists = (DB.students || []).some(s => (s.studentId === sid || s.roll === sid) && s.class === (m.class || ''));
+    if (exists) return;
+    DB.students.push({
+      id: uid('s'),
+      name: m.name,
+      father: m.father || '',
+      class: m.class || (DB.classes[0] || ''),
+      studentId: sid,
+      roll: m.roll || sid,
+      year: m.year || (DB.academicYears[0] || '')
+    });
+    added++;
+  });
+  saveDB();
+  renderAdmin();
+  toast(added + ' জন শিক্ষার্থী ইমপোর্ট হয়েছে ✓', 'gold');
+}
+
+async function importTeachersFromExcel(file) {
+  const rows = await readExcelFile(file);
+  if (!rows.length) { toast('Excel-এ কোনো ডেটা নেই', 'err'); return; }
+  const fieldMap = {
+    name: ['name', 'নাম'],
+    designation: ['designation', 'পদবি', 'পদ'],
+    subject: ['subject', 'বিষয়'],
+    qualification: ['qualification', 'যোগ্যতা'],
+    bio: ['bio', 'পরিচিতি', 'about']
+  };
+  let added = 0;
+  rows.forEach(row => {
+    const m = mapRow(row, fieldMap);
+    if (!m.name) return;
+    DB.teachers.push({
+      id: uid('t'),
+      name: m.name,
+      designation: m.designation || '',
+      subject: m.subject || '',
+      qualification: m.qualification || '',
+      bio: m.bio || '',
+      photo: ''
+    });
+    added++;
+  });
+  saveDB();
+  renderAdmin();
+  toast(added + ' জন শিক্ষক ইমপোর্ট হয়েছে ✓', 'gold');
+}
+
+async function importResultsFromExcel(file) {
+  const rows = await readExcelFile(file);
+  if (!rows.length) { toast('Excel-এ কোনো ডেটা নেই', 'err'); return; }
+  // Expected flexible columns:
+  // name, father, class, roll, year, exam, remarks
+  // then pairs: subject / obtained / full  OR  subject1, marks1, full1 ...
+  let added = 0;
+  const groups = {}; // key = class|roll|year|exam
+
+  rows.forEach(row => {
+    const keys = Object.keys(row);
+    const get = (...aliases) => {
+      for (const k of keys) {
+        const nk = normalizeHeader(k);
+        if (aliases.some(a => nk === a || nk.includes(a))) return String(row[k] ?? '').trim();
+      }
+      return '';
+    };
+    const name = get('name', 'studentname', 'নাম', "student'sname");
+    const roll = get('roll', 'রোল', 'rollnumber', 'roll number');
+    const sid  = get('id', 'studentid', 'student id', 'আইডি', 'aid');
+    const cls  = get('class', 'শ্রেণি', 'শ্রেণী');
+    if (!name || (!roll && !sid)) return;
+
+    const year = get('year', 'বছর', 'শিক্ষাবর্ষ', 'session') || (DB.academicYears[0] || '');
+    let exam = get('exam', 'examtype', 'পরীক্ষা', 'examination') || (DB.examTypes[0] || '');
+    // normalize common english exam names
+    const el = exam.toLowerCase();
+    if (el.includes('half') || el.includes('অর্ধ')) exam = 'অর্ধবার্ষিক';
+    else if (el.includes('final') || el.includes('annual') || el.includes('বার্ষিক')) exam = 'বার্ষিক';
+    else if (el.includes('pre') && el.includes('select') || el.includes('প্রাক')) exam = 'প্রাক নির্বাচনি';
+    else if (el.includes('select') || el.includes('নির্বাচনি')) exam = 'নির্বাচনি';
+
+    const father = get('father', 'পিতা', 'fathername', "father'sname");
+    const remarks = get('remarks', 'মন্তব্য', 'remark');
+    const merit = get('merit', 'meritposition', 'position', 'মেধা', 'rank');
+    let branch = get('branch', 'শাখা', 'section', 'group', 'type');
+    const bl = (branch || '').toLowerCase();
+    if (bl.includes('girl') || bl.includes('balika') || bl.includes('বালিকা') || bl.includes('female')) branch = 'বালিকা';
+    else if (bl.includes('hif') || bl.includes('হিফজ') || bl.includes('hifz')) branch = 'হিফজ';
+    else if (bl.includes('boy') || bl.includes('balok') || bl.includes('বালক') || bl.includes('male')) branch = 'বালক';
+    else if (!branch) branch = 'বালক';
+
+    const idVal = sid || roll;
+    const rollVal = roll || sid;
+    const key = [cls, idVal, year, exam].join('|');
+    if (!groups[key]) {
+      groups[key] = {
+        id: uid('r'),
+        studentName: name,
+        fatherName: father,
+        class: cls || (DB.classes[0] || ''),
+        studentId: idVal,
+        roll: rollVal,
+        year,
+        examType: exam,
+        branch: branch,
+        meritPosition: merit,
+        remarks,
+        subjects: []
+      };
+    }
+
+    // Single-subject style row: subject + obtained + full
+    const subj = get('subject', 'বিষয়', 'subjectname', 'subject name');
+    const obt  = get('obtained', 'marks', 'প্রাপ্ত', 'score', 'mark', 'marks obtained', 'marksobtained');
+    const full = get('full', 'total', 'পূর্ণ', 'fullmarks', 'full marks') || '100';
+    if (subj) {
+      groups[key].subjects.push({
+        name: subj,
+        obtained: Number(obt) || 0,
+        full: Number(full) || 100
+      });
+    }
+
+    // Multi-column style: Subject1, Obtained1, Full1 ... or Bangla variants
+    for (let i = 1; i <= 20; i++) {
+      const s = get('subject' + i, 'বিষয়' + i, 'sub' + i);
+      if (!s) continue;
+      const o = get('obtained' + i, 'marks' + i, 'প্রাপ্ত' + i, 'mark' + i) || '0';
+      const f = get('full' + i, 'total' + i, 'পূর্ণ' + i) || '100';
+      groups[key].subjects.push({
+        name: s,
+        obtained: Number(o) || 0,
+        full: Number(f) || 100
+      });
+    }
+  });
+
+  Object.values(groups).forEach(r => {
+    if (!r.subjects.length) {
+      // fallback: if no subject columns, still save with empty subjects so user can edit
+      r.subjects = [{ name: 'সাধারণ', obtained: 0, full: 100 }];
+    }
+    // avoid exact duplicate
+    const exists = (DB.results || []).some(x =>
+      (x.studentId === r.studentId || x.roll === r.roll) && x.class === r.class && x.year === r.year && x.examType === r.examType
+    );
+    if (!exists) {
+      DB.results.push(r);
+      added++;
+    }
+  });
+
+  saveDB();
+  renderAdmin();
+  toast(added + ' টি ফলাফল ইমপোর্ট হয়েছে ✓', 'gold');
+}
+
+async function importNoticesFromExcel(file) {
+  const rows = await readExcelFile(file);
+  if (!rows.length) { toast('Excel-এ কোনো ডেটা নেই', 'err'); return; }
+  const fieldMap = {
+    title: ['title', 'শিরোনাম'],
+    date: ['date', 'তারিখ'],
+    summary: ['summary', 'সংক্ষিপ্ত'],
+    body: ['body', 'বিস্তারিত', 'detail'],
+    attachment: ['attachment', 'সংযুক্তি', 'file', 'url']
+  };
+  let added = 0;
+  rows.forEach(row => {
+    const m = mapRow(row, fieldMap);
+    if (!m.title) return;
+    let date = m.date || new Date().toISOString().slice(0, 10);
+    // try parse common date formats
+    if (date && !/^\d{4}-\d{2}-\d{2}/.test(date)) {
+      const d = new Date(date);
+      if (!isNaN(d)) date = d.toISOString().slice(0, 10);
+    }
+    DB.notices.push({
+      id: uid('n'),
+      title: m.title,
+      date,
+      summary: m.summary || '',
+      body: m.body || '',
+      attachment: m.attachment || '',
+      published: true
+    });
+    added++;
+  });
+  saveDB();
+  renderAdmin();
+  toast(added + ' টি নোটিশ ইমপোর্ট হয়েছে ✓', 'gold');
+}
+
+function handleExcelImport(type, inputEl) {
+  const file = inputEl.files[0];
+  if (!file) return;
+  const name = (file.name || '').toLowerCase();
+  const mime = (file.type || '').toLowerCase();
+  const okExt = name.endsWith('.xlsx') || name.endsWith('.xls') || name.endsWith('.csv') || name.endsWith('.txt');
+  const okMime = mime.includes('csv') || mime.includes('sheet') || mime.includes('excel') || mime.includes('text') || mime === '';
+  if (!okExt && !okMime) {
+    toast('শুধু Excel (.xlsx / .xls) বা CSV সাপোর্ট করে', 'err');
+    inputEl.value = '';
+    return;
+  }
+  if (!window.XLSX) {
+    toast('Excel লাইব্রেরি লোড হয়নি। ইন্টারনেট চালু করে পেজ রিফ্রেশ করুন।', 'err');
+    inputEl.value = '';
+    return;
+  }
+  toast('ইমপোর্ট হচ্ছে...', 'gold');
+  const runners = {
+    students: importStudentsFromExcel,
+    teachers: importTeachersFromExcel,
+    results: importResultsFromExcel,
+    notices: importNoticesFromExcel
+  };
+  const fn = runners[type];
+  if (!fn) return;
+  fn(file).then(() => {
+    // after import push to cloud if enabled
+    try { if (typeof cloudPush === 'function') cloudPush(); } catch(e){}
+  }).catch(err => {
+    console.error(err);
+    toast('ইমপোর্ট ব্যর্থ: ' + (err.message || 'অজানা সমস্যা'), 'err');
+  }).finally(() => { try { inputEl.value = ''; } catch(e){} });
+}
+
+
+async function handleResultPdfImport(inputEl) {
+  const file = inputEl.files[0];
+  inputEl.value = '';
+  if (!file) return;
+  const name = (file.name || '').toLowerCase();
+  if (!name.endsWith('.pdf')) {
+    toast('শুধু PDF দিন — অথবা Excel/CSV ব্যবহার করুন', 'err');
+    return;
+  }
+  const pdfLib = window.pdfjsLib || window['pdfjs-dist/build/pdf'] || window.pdfjs;
+  if (!pdfLib) {
+    toast('PDF লাইব্রেরি লোড হয়নি। ইন্টারনেট চালু করে রিফ্রেশ করুন। অথবা Excel/CSV দিন।', 'err');
+    return;
+  }
+  toast('PDF পড়া হচ্ছে...', 'gold');
+  try {
+    try {
+      pdfLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    } catch (e) {}
+    const buf = await file.arrayBuffer();
+    let pdf;
+    try {
+      pdf = await pdfLib.getDocument({ data: buf }).promise;
+    } catch (werr) {
+      // Worker fail on some mobiles — retry without worker
+      pdf = await pdfLib.getDocument({ data: buf, disableWorker: true }).promise;
+    }
+    let text = '';
+    for (let i = 1; i <= Math.min(pdf.numPages, 5); i++) {
+      const page = await pdf.getPage(i);
+      const content = await page.getTextContent();
+      text += content.items.map(it => it.str).join(' ') + '\n';
+    }
+    // Heuristic parse for transcript-like PDFs
+    const get = (re) => {
+      const m = text.match(re);
+      return m ? m[1].trim() : '';
+    };
+    const studentName = get(/Student'?s?\s*Name\s*[:\|]?\s*([A-Za-z\u0980-\u09FF .]+)/i)
+      || get(/নাম\s*[:\|]?\s*([A-Za-z\u0980-\u09FF .]+)/);
+    const father = get(/Father'?s?\s*Name\s*[:\|]?\s*([A-Za-z\u0980-\u09FF .]+)/i)
+      || get(/পিতা[^\n]{0,10}[:\|]?\s*([A-Za-z\u0980-\u09FF .]+)/);
+    const cls = get(/Class\s*[:\|]?\s*([A-Za-z0-9\u0980-\u09FF ]+)/i)
+      || get(/শ্রেণি\s*[:\|]?\s*([A-Za-z0-9\u0980-\u09FF ]+)/);
+    const sid = get(/\bID\s*[:\|]?\s*(\d+)/i) || get(/আইডি\s*[:\|]?\s*(\d+)/);
+    const roll = get(/Roll\s*(?:Number|No\.?)?\s*[:\|]?\s*(\d+)/i) || get(/রোল\s*[:\|]?\s*(\d+)/);
+    const merit = get(/Merit\s*Position\s*[:\|]?\s*(\d+)/i) || get(/মেধা\s*[:\|]?\s*(\d+)/);
+    const remarks = get(/Remarks?\s*[:\|]?\s*(.{10,120})/i) || '';
+
+    // Subject lines: "1 Quran Majid 100 86 86.0"
+    const subjects = [];
+    const subjRe = /(\d+)\s+([A-Za-z\u0980-\u09FF][A-Za-z\u0980-\u09FF0-9 .,&\-]{2,40}?)\s+(\d{1,3})\s+(\d{1,3}(?:\.\d+)?)\s+(\d{1,3}(?:\.\d+)?)/g;
+    let sm;
+    while ((sm = subjRe.exec(text)) !== null) {
+      const full = Number(sm[3]);
+      const obt = Number(sm[4]);
+      if (full > 0 && obt <= full + 5) {
+        subjects.push({ name: sm[2].trim(), full, obtained: obt });
+      }
+    }
+
+    if (!studentName && !subjects.length) {
+      toast('PDF থেকে টেবিল পড়া যায়নি। অনুগ্রহ করে Excel/CSV তে রূপান্তর করে ইমপোর্ট করুন।', 'err');
+      console.log('PDF text sample:', text.slice(0, 500));
+      return;
+    }
+
+    DB.results = DB.results || [];
+    DB.results.push({
+      id: uid('r'),
+      studentName: studentName || 'Unknown',
+      fatherName: father || '',
+      class: cls || (DB.classes[0] || ''),
+      studentId: sid || roll || '',
+      roll: roll || sid || '',
+      year: (DB.academicYears && DB.academicYears[0]) || '২০২৬',
+      examType: (DB.examTypes && DB.examTypes[0]) || 'অর্ধবার্ষিক',
+      branch: 'বালক',
+      meritPosition: merit || '',
+      remarks: remarks,
+      subjects: subjects.length ? subjects : [{ name: 'Imported from PDF', full: 100, obtained: 0 }],
+      pdfAttachment: null
+    });
+    saveDB();
+    renderAdmin();
+    try { if (typeof cloudPush === 'function') cloudPush(); } catch(e){}
+    toast('PDF থেকে ফলাফল ইমপোর্ট ✓ (' + subjects.length + ' বিষয়)', 'gold');
+  } catch (err) {
+    console.error(err);
+    toast('PDF ইমপোর্ট ব্যর্থ: ' + (err.message || '') + ' — Excel/CSV ব্যবহার করুন', 'err');
+  }
+}
+
+function handlePdfAttachment(inputEl) {
+  const file = inputEl.files[0];
+  if (!file) return;
+  if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
+    toast('শুধু PDF ফাইল দিন', 'err');
+    inputEl.value = '';
+    return;
+  }
+  if (file.size > 5 * 1024 * 1024) {
+    toast('PDF ৫MB এর কম হতে হবে', 'err');
+    inputEl.value = '';
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = ev => {
+    // store as data URL so notice attachment works offline
+    window._lastPdfDataUrl = ev.target.result;
+    window._lastPdfName = file.name;
+    const preview = document.getElementById('pdfAttachPreview');
+    if (preview) preview.textContent = '✓ ' + file.name + ' নির্বাচিত';
+    toast('PDF প্রস্তুত — নোটিশ সংরক্ষণ করলে সংযুক্ত হবে', 'gold');
+  };
+  reader.readAsDataURL(file);
+  inputEl.value = '';
+}
+
+function downloadSampleExcel(type) {
+  if (!window.XLSX) { toast('Excel লাইব্রেরি লোড হয়নি', 'err'); return; }
+  let rows = [];
+  let filename = 'sample.xlsx';
+  if (type === 'students') {
+    rows = [
+      { 'নাম': 'Al Amin', 'পিতার নাম': 'Hafijul Islam', 'শ্রেণি': 'Eight', 'ID': '20031', 'রোল': '1', 'শিক্ষাবর্ষ': '২০২৬' },
+      { 'নাম': 'মোহাম্মদ আরিফ', 'পিতার নাম': 'আব্দুল করিম', 'শ্রেণি': 'পঞ্চম শ্রেণি', 'ID': '10101', 'রোল': '12', 'শিক্ষাবর্ষ': '২০২৬' }
+    ];
+    filename = 'sample-students.xlsx';
+  } else if (type === 'teachers') {
+    rows = [
+      { 'নাম': 'মাওলানা আব্দুল্লাহ', 'পদবি': 'প্রধান শিক্ষক', 'বিষয়': 'হাদীস', 'যোগ্যতা': 'দাওরায়ে হাদীস', 'পরিচিতি': '২০ বছর অভিজ্ঞতা' },
+      { 'নাম': 'হাফেজ রফিকুল ইসলাম', 'পদবি': 'সহকারী শিক্ষক', 'বিষয়': 'কুরআন', 'যোগ্যতা': 'হিফজুল কুরআন', 'পরিচিতি': '' }
+    ];
+    filename = 'sample-teachers.xlsx';
+  } else if (type === 'results') {
+    rows = [
+      { "Student's Name": 'Al Amin', "Father's Name": 'Hafijul Islam', 'Class': 'Eight', 'ID': '20031', 'Roll Number': '1', 'Year': '2026', 'Examination': 'half yearly', 'Branch': 'বালক', 'Merit Position': '1', 'Subject Name': 'Quran Majid', 'Full Marks': '100', 'Marks Obtained': '86', 'Remarks': 'The result is excellent; encouraged to maintain this consistency.' },
+      { "Student's Name": 'Al Amin', "Father's Name": 'Hafijul Islam', 'Class': 'Eight', 'ID': '20031', 'Roll Number': '1', 'Year': '2026', 'Examination': 'half yearly', 'Merit Position': '1', 'Subject Name': 'Aqaid and Fiqh', 'Full Marks': '100', 'Marks Obtained': '91', 'Remarks': '' },
+      { "Student's Name": 'Al Amin', "Father's Name": 'Hafijul Islam', 'Class': 'Eight', 'ID': '20031', 'Roll Number': '1', 'Year': '2026', 'Examination': 'half yearly', 'Merit Position': '1', 'Subject Name': 'Mathematics', 'Full Marks': '100', 'Marks Obtained': '74', 'Remarks': '' }
+    ];
+    filename = 'sample-results.xlsx';
+  } else if (type === 'notices') {
+    rows = [
+      { 'শিরোনাম': 'বার্ষিক পরীক্ষার রুটিন', 'তারিখ': '2026-03-15', 'সংক্ষিপ্ত': 'পরীক্ষা শুরু ১ এপ্রিল', 'বিস্তারিত': 'সকল শিক্ষার্থীকে জানানো যাচ্ছে যে...', 'সংযুক্তি': '' }
+    ];
+    filename = 'sample-notices.xlsx';
+  }
+  const ws = XLSX.utils.json_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Sheet1');
+  XLSX.writeFile(wb, filename);
+  toast('স্যাম্পল ডাউনলোড ✓');
+}
+
+function renderAdmin() {
+  const side = document.getElementById('adminSide');
+  side.innerHTML = ADMIN_TABS.map(t =>
+    `<button class="${adminTab===t.id?'active':''}" onclick="adminTab='${t.id}';renderAdmin()">${t.label}</button>`
+  ).join('') + `<button onclick="adminLogout()" style="margin-top:10px;color:#a52833">🚪 লগআউট</button>`;
+
+  document.getElementById('adminTitle').textContent = '🔐 অ্যাডমিন — ' + (DB.config.name || '');
+
+  const main = document.getElementById('adminMain');
+  if (adminTab === 'dashboard') main.innerHTML = adminDashboard();
+  else if (adminTab === 'general') main.innerHTML = adminGeneral();
+  else if (adminTab === 'branding') main.innerHTML = adminBranding();
+  else if (adminTab === 'students') main.innerHTML = adminStudents();
+  else if (adminTab === 'teachers') main.innerHTML = adminTeachers();
+  else if (adminTab === 'results') main.innerHTML = adminResults();
+  else if (adminTab === 'notices') main.innerHTML = adminNotices();
+  else if (adminTab === 'classes') main.innerHTML = adminClasses();
+  else if (adminTab === 'admission') main.innerHTML = adminAdmission();
+  else if (adminTab === 'grading') main.innerHTML = adminGrading();
+  else if (adminTab === 'backup') main.innerHTML = adminBackup();
+
+  if (adminTab === 'results') {
+    setTimeout(() => {
+      const box = document.getElementById('subjRows');
+      if (box && !box.children.length) addSubjectRow();
+    }, 60);
+  }
+}
+
+function adminDashboard() {
+  const pubNotices = (DB.notices || []).filter(n => n.published).length;
+  const passed = (DB.results || []).filter(r => calcResult(r).pass).length;
+  const passRate = DB.results.length ? Math.round(passed / DB.results.length * 100) : 0;
+  return `
+  <h3>ড্যাশবোর্ড</h3>
+  <p class="sub">সামগ্রিক পরিসংখ্যান ও দ্রুত অ্যাকশন</p>
+  <div class="admin-stats">
+    <div class="admin-stat"><div class="n">${bnNum((DB.students||[]).length)}</div><div class="l">শিক্ষার্থী</div></div>
+    <div class="admin-stat"><div class="n">${bnNum((DB.teachers||[]).length)}</div><div class="l">শিক্ষক</div></div>
+    <div class="admin-stat"><div class="n">${bnNum(pubNotices)}</div><div class="l">প্রকাশিত নোটিশ</div></div>
+    <div class="admin-stat"><div class="n">${bnNum((DB.results||[]).length)}</div><div class="l">ফলাফল</div></div>
+  </div>
+  <div class="admin-card">
+    <h4>📈 ফলাফল পরিসংখ্যান</h4>
+    <div class="admin-stats" style="margin-bottom:0">
+      <div class="admin-stat"><div class="n" style="color:#0b6b4b">${bnNum(passed)}</div><div class="l">উত্তীর্ণ</div></div>
+      <div class="admin-stat"><div class="n" style="color:#a52833">${bnNum((DB.results||[]).length - passed)}</div><div class="l">অকৃতকার্য</div></div>
+      <div class="admin-stat"><div class="n">${bnNum(passRate)}%</div><div class="l">পাসের হার</div></div>
+      <div class="admin-stat"><div class="n">${bnNum((DB.classes||[]).length)}</div><div class="l">শ্রেণি</div></div>
+    </div>
+  </div>
+  <div class="admin-card">
+    <h4>⚡ দ্রুত অ্যাকশন</h4>
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <button class="btn btn-primary btn-sm" onclick="adminTab='general';renderAdmin()">⚙️ তথ্য</button>
+      <button class="btn btn-primary btn-sm" onclick="adminTab='teachers';renderAdmin()">➕ শিক্ষক</button>
+      <button class="btn btn-primary btn-sm" onclick="adminTab='students';renderAdmin()">➕ শিক্ষার্থী</button>
+      <button class="btn btn-primary btn-sm" onclick="adminTab='results';renderAdmin()">➕ ফলাফল</button>
+      <button class="btn btn-primary btn-sm" onclick="adminTab='notices';renderAdmin()">➕ নোটিশ</button>
+    </div>
+  </div>`;
+}
+
+function adminGeneral() {
+  const c = DB.config;
+  return `
+  <h3>সাধারণ তথ্য</h3>
+  <p class="sub">মাদরাসার মূল তথ্য এখান থেকে পরিবর্তন করুন</p>
+  <div class="admin-card">
+    <div class="admin-form-grid">
+      <div class="field"><label>মাদরাসার নাম</label><input id="gName" value="${esc(c.name)}"></div>
+      <div class="field"><label>সংক্ষিপ্ত নাম</label><input id="gShort" value="${esc(c.shortName||'')}"></div>
+      <div class="field"><label>আরবি নাম</label><input id="gAr" value="${esc(c.arabicName||'')}"></div>
+      <div class="field"><label>সাবটাইটেল</label><input id="gSub" value="${esc(c.subtitle||'')}"></div>
+      <div class="field full"><label>পরিচালনায় (Trustee)</label><input id="gTrustee" value="${esc(c.trustee||'')}"></div>
+      <div class="field"><label>প্রতিষ্ঠার সাল</label><input id="gEst" value="${esc(c.established)}"></div>
+      <div class="field"><label>Trustee ব্যাজ</label><input id="gBadge" value="${esc(c.trusteeBadge||'')}"></div>
+      <div class="field"><label>ফোন ১</label><input id="gPhone" value="${esc(c.phone)}"></div>
+      <div class="field"><label>ফোন ২</label><input id="gPhone2" value="${esc(c.phone2||'')}"></div>
+      <div class="field"><label>ইমেইল</label><input id="gEmail" value="${esc(c.email)}"></div>
+      <div class="field"><label>হোয়াটসঅ্যাপ</label><input id="gWa" value="${esc(c.whatsapp||'')}"></div>
+      <div class="field full"><label>ঠিকানা</label><input id="gLoc" value="${esc(c.location)}"></div>
+      <div class="field full"><label>ট্যাগলাইন</label><input id="gTagline" value="${esc(c.tagline||'')}"></div>
+      <div class="field full"><label>ভর্তি নোটিশ</label><input id="gAdmNotice" value="${esc(c.admissionNotice||'')}"></div>
+      <div class="field"><label>ভর্তি শুরু</label><input id="gAdmStart" value="${esc(c.admissionStartDate||'')}"></div>
+      <div class="field"><label>ভর্তি বছর</label><input id="gAdmYear" value="${esc(c.admissionYear||'')}"></div>
+      <div class="field"><label>নোটিশ ব্যাজ</label><input id="gNoticeBadge" value="${esc(c.noticeBadge||'')}"></div>
+      <div class="field full"><label>পরিচিতি (About)</label><textarea id="gAbout">${esc(c.about)}</textarea></div>
+    </div>
+    <button class="btn btn-primary" onclick="saveGeneral()">💾 সংরক্ষণ করুন</button>
+  </div>
+  <div class="admin-card">
+    <h4>✨ হিরো সেকশনের বৈশিষ্ট্য <button class="mini-btn mini-edit" onclick="addFeature()">➕ যোগ</button></h4>
+    <div id="featureList">
+      ${(c.heroFeatures||[]).map((f,i) => `
+        <div style="display:flex;gap:8px;margin-bottom:8px">
+          <input value="${esc(f)}" onchange="DB.config.heroFeatures[${i}]=this.value;saveDB()" style="flex:1;padding:10px 14px;border:2px solid var(--border);border-radius:10px">
+          <button class="mini-btn mini-del" onclick="delFeature(${i})">✕</button>
+        </div>
+      `).join('')}
+    </div>
+  </div>`;
+}
+function saveGeneral() {
+  DB.config.name = document.getElementById('gName').value.trim();
+  DB.config.shortName = document.getElementById('gShort').value.trim();
+  DB.config.arabicName = document.getElementById('gAr').value.trim();
+  DB.config.subtitle = document.getElementById('gSub').value.trim();
+  DB.config.trustee = document.getElementById('gTrustee').value.trim();
+  DB.config.established = document.getElementById('gEst').value.trim();
+  DB.config.trusteeBadge = document.getElementById('gBadge').value.trim();
+  DB.config.phone = document.getElementById('gPhone').value.trim();
+  DB.config.phone2 = document.getElementById('gPhone2').value.trim();
+  DB.config.email = document.getElementById('gEmail').value.trim();
+  DB.config.whatsapp = document.getElementById('gWa').value.trim();
+  DB.config.location = document.getElementById('gLoc').value.trim();
+  DB.config.tagline = document.getElementById('gTagline').value.trim();
+  DB.config.admissionNotice = document.getElementById('gAdmNotice').value.trim();
+  DB.config.admissionStartDate = document.getElementById('gAdmStart').value.trim();
+  DB.config.admissionYear = document.getElementById('gAdmYear').value.trim();
+  DB.config.noticeBadge = document.getElementById('gNoticeBadge').value.trim();
+  DB.config.about = document.getElementById('gAbout').value.trim();
+  saveDB(); toast('সংরক্ষিত ✓');
+}
+function addFeature() { DB.config.heroFeatures.push('নতুন বৈশিষ্ট্য'); saveDB(); renderAdmin(); }
+function delFeature(i) { DB.config.heroFeatures.splice(i,1); saveDB(); renderAdmin(); toast('মুছে ফেলা হয়েছে'); }
+
+function adminBranding() {
+  const c = DB.config;
+  return `
+  <h3>লোগো</h3>
+  <p class="sub">মাদরাসার লোগো সরাসরি আপলোড করুন</p>
+  <div class="admin-card">
+    <div style="text-align:center;margin-bottom:24px">
+      <div style="width:150px;height:150px;border-radius:20px;background:linear-gradient(135deg,var(--green-700),var(--emerald));display:grid;place-items:center;color:var(--gold-300);font-family:var(--font-arabic);font-size:4rem;font-weight:700;margin:0 auto;border:3px solid var(--gold-400);box-shadow:0 15px 40px rgba(13,112,67,.35);overflow:hidden">
+        ${c.logo ? `<img src="${esc(c.logo)}" style="width:100%;height:100%;object-fit:cover">` : '﷽'}
+      </div>
+    </div>
+    <div class="field">
+      <label>📸 লোগো আপলোড করুন</label>
+      <label class="image-upload-box">
+        <input type="file" accept="image/*" onchange="uploadLogo(event)">
+        <div style="font-size:2.4rem;margin-bottom:8px">📤</div>
+        <div style="font-weight:800;color:var(--green-800);font-size:1rem">ছবি নির্বাচন করুন</div>
+        <div style="font-size:.82rem;color:var(--muted);margin-top:6px">সর্বোচ্চ ৫০০KB · JPG/PNG</div>
+      </label>
+    </div>
+    <div class="field">
+      <label>অথবা লোগো URL</label>
+      <input id="bLogo" value="${esc(c.logo)}" placeholder="https://example.com/logo.png">
+    </div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <button class="btn btn-primary" onclick="saveBranding()">💾 সংরক্ষণ</button>
+      ${c.logo ? `<button class="btn btn-danger" onclick="DB.config.logo='';saveDB();renderAdmin();toast('লোগো মুছে ফেলা হয়েছে','err')">🗑️ লোগো মুছুন</button>` : ''}
+    </div>
+  </div>`;
+}
+function saveBranding() {
+  DB.config.logo = document.getElementById('bLogo').value.trim();
+  saveDB(); toast('সংরক্ষিত ✓');
+}
+function uploadLogo(e) {
+  const file = e.target.files[0]; if (!file) return;
+  if (file.size > 500*1024) { toast('ছবি ৫০০KB এর কম হতে হবে', 'err'); return; }
+  const reader = new FileReader();
+  reader.onload = ev => {
+    DB.config.logo = ev.target.result;
+    saveDB(); renderAdmin(); toast('লোগো আপলোড ✓');
+  };
+  reader.readAsDataURL(file);
+}
+
+function adminStudents() {
+  return `
+  <h3>শিক্ষার্থী ব্যবস্থাপনা</h3>
+  <p class="sub">শিক্ষার্থী যোগ, সম্পাদনা ও মুছে ফেলুন · Excel থেকে বাল্ক ইমপোর্ট</p>
+  <div class="admin-card">
+    <h4>📥 Excel থেকে ইমপোর্ট</h4>
+    <div class="import-box">
+      <label>
+        <input type="file" accept=".xlsx,.xls,.csv,.txt,text/csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" style="display:none" onchange="handleExcelImport('students', this)">
+        <div style="font-size:2rem;margin-bottom:6px">📊</div>
+        <div style="font-weight:800;color:var(--green-800)">Excel / CSV ফাইল নির্বাচন করুন</div>
+        <div class="import-hint">কলাম: <code>নাম</code> <code>পিতার নাম</code> <code>শ্রেণি</code> <code>রোল</code> <code>শিক্ষাবর্ষ</code></div>
+      </label>
+      <div style="text-align:center;margin-top:12px">
+        <button class="btn btn-outline btn-sm" onclick="downloadSampleExcel('students')">⬇️ স্যাম্পল Excel ডাউনলোড</button>
+      </div>
+    </div>
+  </div>
+  <div class="admin-card">
+    <h4>➕ নতুন শিক্ষার্থী যোগ করুন</h4>
+    <div class="admin-form-grid">
+      <div class="field" style="margin-bottom:0"><label>নাম *</label><input id="stName" placeholder="শিক্ষার্থীর নাম"></div>
+      <div class="field" style="margin-bottom:0"><label>পিতার নাম</label><input id="stFather" placeholder="পিতার নাম"></div>
+      <div class="field" style="margin-bottom:0"><label>শ্রেণি *</label><select id="stClass">${(DB.classes||[]).map(c=>`<option>${esc(c)}</option>`).join('')}</select></div>
+      <div class="field" style="margin-bottom:0"><label>আইডি নম্বর *</label><input id="stId" placeholder="যেমন: 20031"></div>
+      <div class="field" style="margin-bottom:0"><label>রোল</label><input id="stRoll" placeholder="রোল (ঐচ্ছিক)"></div>
+      <div class="field" style="margin-bottom:0"><label>শিক্ষাবর্ষ</label><select id="stYear">${(DB.academicYears||[]).map(y=>`<option>${esc(y)}</option>`).join('')}</select></div>
+      <div class="field" style="margin-bottom:0;display:flex;align-items:flex-end"><button class="btn btn-primary btn-block" onclick="addStudent()">➕ যোগ করুন</button></div>
+    </div>
+  </div>
+  <div class="admin-card">
+    <h4>📋 শিক্ষার্থী তালিকা (${bnNum((DB.students||[]).length)})</h4>
+    <div class="tbl-wrap">
+      <table class="admin-tbl">
+        <thead><tr><th>নাম</th><th>পিতা</th><th>শ্রেণি</th><th>আইডি</th><th>রোল</th><th>বছর</th><th>অ্যাকশন</th></tr></thead>
+        <tbody>
+          ${(DB.students||[]).length ? DB.students.map(s => `
+            <tr>
+              <td>${esc(s.name)}</td>
+              <td>${esc(s.father||'—')}</td>
+              <td>${esc(s.class)}</td>
+              <td>${esc(s.studentId||s.roll||'—')}</td>
+              <td>${esc(s.roll||'—')}</td>
+              <td>${esc(s.year||'—')}</td>
+              <td><div class="row-actions">
+                <button class="mini-btn mini-edit" onclick="editStudent('${s.id}')">✏️ সম্পাদনা</button>
+                <button class="mini-btn mini-del" onclick="delStudent('${s.id}')">🗑️ মুছুন</button>
+              </div></td>
+            </tr>
+          `).join('') : '<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:26px">কোনো শিক্ষার্থী নেই</td></tr>'}
+        </tbody>
+      </table>
+    </div>
+  </div>`;
+}
+function addStudent() {
+  const name = document.getElementById('stName').value.trim();
+  const sid  = (document.getElementById('stId')||{}).value?.trim() || '';
+  const roll = document.getElementById('stRoll').value.trim();
+  const cls  = document.getElementById('stClass').value;
+  if (!name || (!sid && !roll)) { toast('নাম ও আইডি/রোল দিন', 'err'); return; }
+  DB.students.push({
+    id: uid('s'), name,
+    father: document.getElementById('stFather').value.trim(),
+    class: cls,
+    studentId: sid || roll,
+    roll: roll || sid,
+    year: document.getElementById('stYear').value
+  });
+  saveDB(); renderAdmin(); toast('যোগ ✓');
+}
+function delStudent(id) {
+  if (!confirm('মুছে ফেলতে চান?')) return;
+  DB.students = DB.students.filter(s => s.id !== id);
+  saveDB(); renderAdmin(); toast('মুছে ফেলা হয়েছে');
+}
+function editStudent(id) {
+  const s = DB.students.find(x => x.id === id); if (!s) return;
+  openEdit('শিক্ষার্থী সম্পাদনা', `
+    <div class="field"><label>নাম</label><input id="eName" value="${esc(s.name)}"></div>
+    <div class="field"><label>পিতার নাম</label><input id="eFather" value="${esc(s.father||'')}"></div>
+    <div class="field"><label>শ্রেণি</label><select id="eClass">${(DB.classes||[]).map(c=>`<option ${c===s.class?'selected':''}>${esc(c)}</option>`).join('')}</select></div>
+    <div class="field"><label>আইডি নম্বর</label><input id="eStudentId" value="${esc(s.studentId||s.roll||'')}"></div>
+    <div class="field"><label>রোল</label><input id="eRoll" value="${esc(s.roll||'')}"></div>
+    <div class="field"><label>শিক্ষাবর্ষ</label><select id="eYear">${(DB.academicYears||[]).map(y=>`<option ${y===s.year?'selected':''}>${esc(y)}</option>`).join('')}</select></div>
+  `, () => {
+    s.name = document.getElementById('eName').value.trim();
+    s.father = document.getElementById('eFather').value.trim();
+    s.class = document.getElementById('eClass').value;
+    s.studentId = document.getElementById('eStudentId').value.trim();
+    s.roll = document.getElementById('eRoll').value.trim() || s.studentId;
+    s.year = document.getElementById('eYear').value;
+    saveDB(); closeEdit(); renderAdmin(); toast('সংরক্ষিত ✓');
+  });
+}
+
+function adminTeachers() {
+  return `
+  <h3>শিক্ষক ব্যবস্থাপনা</h3>
+  <p class="sub">শিক্ষক যোগ, সম্পাদনা ও মুছে ফেলুন · Excel থেকে বাল্ক ইমপোর্ট</p>
+  <div class="admin-card">
+    <h4>📥 Excel থেকে ইমপোর্ট</h4>
+    <div class="import-box">
+      <label>
+        <input type="file" accept=".xlsx,.xls,.csv,.txt,text/csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" style="display:none" onchange="handleExcelImport('teachers', this)">
+        <div style="font-size:2rem;margin-bottom:6px">📊</div>
+        <div style="font-weight:800;color:var(--green-800)">Excel / CSV ফাইল নির্বাচন করুন</div>
+        <div class="import-hint">কলাম: <code>নাম</code> <code>পদবি</code> <code>বিষয়</code> <code>যোগ্যতা</code> <code>পরিচিতি</code></div>
+      </label>
+      <div style="text-align:center;margin-top:12px">
+        <button class="btn btn-outline btn-sm" onclick="downloadSampleExcel('teachers')">⬇️ স্যাম্পল Excel ডাউনলোড</button>
+      </div>
+    </div>
+  </div>
+  <div class="admin-card">
+    <h4>➕ নতুন শিক্ষক যোগ করুন</h4>
+    <div class="admin-form-grid">
+      <div class="field" style="margin-bottom:0"><label>নাম *</label><input id="tName" placeholder="শিক্ষকের নাম"></div>
+      <div class="field" style="margin-bottom:0"><label>পদবি</label><input id="tDesig" placeholder="যেমন: প্রধান শিক্ষক"></div>
+      <div class="field" style="margin-bottom:0"><label>বিষয়</label><input id="tSubject" placeholder="যেমন: হাদীস"></div>
+      <div class="field" style="margin-bottom:0"><label>যোগ্যতা</label><input id="tQual" placeholder="যেমন: দাওরায়ে হাদীস"></div>
+      <div class="field full" style="margin-bottom:0"><label>সংক্ষিপ্ত পরিচিতি</label><input id="tBio"></div>
+      <div class="field full" style="margin-bottom:0">
+        <label>📸 ছবি সরাসরি আপলোড</label>
+        <label class="image-upload-box">
+          <input type="file" accept="image/*" id="tPhotoFile" onchange="previewTeacherPhoto(event)">
+          <div style="display:flex;align-items:center;gap:16px">
+            <div style="width:90px;height:90px;border-radius:14px;background:var(--cream);border:2px dashed var(--border);display:grid;place-items:center;font-size:2rem;overflow:hidden;flex-shrink:0" id="tPhotoPreview">📷</div>
+            <div style="text-align:left">
+              <div style="font-weight:800;color:var(--green-800)">ছবি নির্বাচন করুন</div>
+              <div style="font-size:.82rem;color:var(--muted);margin-top:4px">সর্বোচ্চ ৪০০KB · JPG/PNG</div>
+            </div>
+          </div>
+        </label>
+      </div>
+      <div class="field full" style="margin-bottom:0"><label>অথবা ছবির URL</label><input id="tPhotoUrl" placeholder="https://..."></div>
+      <div class="field full" style="margin-bottom:0"><button class="btn btn-primary" onclick="addTeacher()">➕ যোগ করুন</button></div>
+    </div>
+  </div>
+  <div class="admin-card">
+    <h4>📋 শিক্ষক তালিকা (${bnNum((DB.teachers||[]).length)})</h4>
+    <div class="tbl-wrap">
+      <table class="admin-tbl">
+        <thead><tr><th>ছবি</th><th>নাম</th><th>পদবি</th><th>বিষয়</th><th>অ্যাকশন</th></tr></thead>
+        <tbody>
+          ${(DB.teachers||[]).length ? DB.teachers.map(t => `
+            <tr>
+              <td>${t.photo ? `<img src="${esc(t.photo)}" style="width:44px;height:44px;border-radius:50%;object-fit:cover;border:2px solid var(--gold-400)">` : '<div style="width:44px;height:44px;border-radius:50%;background:var(--cream-2);display:grid;place-items:center;border:2px solid var(--border)">👤</div>'}</td>
+              <td>${esc(t.name)}</td>
+              <td>${esc(t.designation||'—')}</td>
+              <td>${esc(t.subject||'—')}</td>
+              <td><div class="row-actions">
+                <button class="mini-btn mini-edit" onclick="editTeacher('${t.id}')">✏️ সম্পাদনা</button>
+                <button class="mini-btn mini-del" onclick="delTeacher('${t.id}')">🗑️ মুছুন</button>
+              </div></td>
+            </tr>
+          `).join('') : '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:26px">কোনো শিক্ষক নেই</td></tr>'}
+        </tbody>
+      </table>
+    </div>
+  </div>`;
+}
+function previewTeacherPhoto(e) {
+  const file = e.target.files[0]; if (!file) return;
+  if (file.size > 400*1024) { toast('ছবি ৪০০KB এর কম হতে হবে', 'err'); return; }
+  const reader = new FileReader();
+  reader.onload = ev => {
+    tempTeacherPhoto = ev.target.result;
+    const p = document.getElementById('tPhotoPreview');
+    p.innerHTML = '<img src="'+ev.target.result+'" style="width:100%;height:100%;object-fit:cover;border-radius:12px">';
+  };
+  reader.readAsDataURL(file);
+}
+function addTeacher() {
+  const name = document.getElementById('tName').value.trim();
+  if (!name) { toast('নাম দিন', 'err'); return; }
+  const urlPhoto = document.getElementById('tPhotoUrl').value.trim();
+  DB.teachers.push({
+    id: uid('t'), name,
+    designation: document.getElementById('tDesig').value.trim(),
+    subject: document.getElementById('tSubject').value.trim(),
+    qualification: document.getElementById('tQual').value.trim(),
+    bio: document.getElementById('tBio').value.trim(),
+    photo: tempTeacherPhoto || urlPhoto
+  });
+  tempTeacherPhoto = '';
+  saveDB(); renderAdmin(); toast('শিক্ষক যোগ ✓');
+}
+function delTeacher(id) {
+  if (!confirm('এই শিক্ষককে মুছে ফেলতে চান?')) return;
+  DB.teachers = DB.teachers.filter(t => t.id !== id);
+  saveDB(); renderAdmin(); toast('মুছে ফেলা হয়েছে');
+}
+function editTeacher(id) {
+  const t = DB.teachers.find(x => x.id === id); if (!t) return;
+  tempTeacherPhoto = '';
+  openEdit('শিক্ষক সম্পাদনা', `
+    <div style="text-align:center;margin-bottom:16px">
+      <div style="width:110px;height:110px;border-radius:50%;margin:0 auto;background:var(--cream-2);border:3px solid var(--gold-400);overflow:hidden;display:grid;place-items:center;font-size:2.2rem;box-shadow:0 10px 30px rgba(2,17,10,.15)" id="editTPhoto">
+        ${t.photo ? `<img src="${esc(t.photo)}" style="width:100%;height:100%;object-fit:cover">` : '👤'}
+      </div>
+    </div>
+    <div class="field"><label>ছবি পরিবর্তন</label>
+      <label class="image-upload-box">
+        <input type="file" accept="image/*" onchange="previewEditTeacherPhoto(event)">
+        <div style="font-size:1.6rem">📤</div>
+        <div style="font-weight:700;margin-top:6px">ছবি নির্বাচন করুন</div>
+      </label>
+    </div>
+    <div class="field"><label>নাম</label><input id="eName" value="${esc(t.name)}"></div>
+    <div class="field"><label>পদবি</label><input id="eDesig" value="${esc(t.designation||'')}"></div>
+    <div class="field"><label>বিষয়</label><input id="eSubject" value="${esc(t.subject||'')}"></div>
+    <div class="field"><label>যোগ্যতা</label><input id="eQual" value="${esc(t.qualification||'')}"></div>
+    <div class="field"><label>পরিচিতি</label><textarea id="eBio">${esc(t.bio||'')}</textarea></div>
+  `, () => {
+    t.name = document.getElementById('eName').value.trim();
+    t.designation = document.getElementById('eDesig').value.trim();
+    t.subject = document.getElementById('eSubject').value.trim();
+    t.qualification = document.getElementById('eQual').value.trim();
+    t.bio = document.getElementById('eBio').value.trim();
+    if (tempTeacherPhoto) t.photo = tempTeacherPhoto;
+    saveDB(); closeEdit(); renderAdmin(); toast('সংরক্ষিত ✓');
+  });
+}
+function previewEditTeacherPhoto(e) {
+  const file = e.target.files[0]; if (!file) return;
+  if (file.size > 400*1024) { toast('ছবি ৪০০KB এর কম হতে হবে', 'err'); return; }
+  const reader = new FileReader();
+  reader.onload = ev => {
+    tempTeacherPhoto = ev.target.result;
+    document.getElementById('editTPhoto').innerHTML = '<img src="'+ev.target.result+'" style="width:100%;height:100%;object-fit:cover">';
+  };
+  reader.readAsDataURL(file);
+}
+
+function adminResults() {
+  return `
+  <h3>ফলাফল ব্যবস্থাপনা</h3>
+  <p class="sub">ফলাফল যোগ, সম্পাদনা ও মুছে ফেলুন · Excel থেকে বাল্ক ইমপোর্ট</p>
+  <div class="admin-card">
+    <h4>📥 Excel থেকে ইমপোর্ট</h4>
+    <div class="import-box">
+      <label>
+        <input type="file" accept=".xlsx,.xls,.csv,.txt,text/csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" style="display:none" onchange="handleExcelImport('results', this)" id="resultsExcelInput">
+        <div style="font-size:2rem;margin-bottom:6px">📊</div>
+        <div style="font-weight:800;color:var(--green-800)">Excel / CSV ফাইল নির্বাচন করুন</div>
+        <div class="import-hint">
+          প্রতি সারি = এক বিষয়ের নম্বর। একই রোলের একাধিক সারি একসাথে মিলবে।<br>
+          কলাম: <code>নাম</code> <code>পিতার নাম</code> <code>শ্রেণি</code> <code>রোল</code> <code>শিক্ষাবর্ষ</code> <code>পরীক্ষা</code> <code>বিষয়</code> <code>প্রাপ্ত</code> <code>পূর্ণ</code>
+        </div>
+      </label>
+      <div style="text-align:center;margin-top:12px">
+        <button class="btn btn-outline btn-sm" onclick="downloadSampleExcel('results')">⬇️ স্যাম্পল Excel ডাউনলোড</button>
+      </div>
+    </div>
+  </div>
+  <div class="admin-card">
+    <h4>➕ নতুন ফলাফল যোগ করুন</h4>
+    <div class="admin-form-grid">
+      <div class="field" style="margin-bottom:0"><label>শিক্ষার্থীর নাম *</label><input id="rName"></div>
+      <div class="field" style="margin-bottom:0"><label>পিতার নাম</label><input id="rFather"></div>
+      <div class="field" style="margin-bottom:0"><label>শ্রেণি *</label><select id="rClass">${(DB.classes||[]).map(c=>`<option>${esc(c)}</option>`).join('')}</select></div>
+      <div class="field" style="margin-bottom:0"><label>আইডি নম্বর *</label><input id="rStudentId" placeholder="যেমন: 20031"></div>
+      <div class="field" style="margin-bottom:0"><label>রোল</label><input id="rRoll" placeholder="ঐচ্ছিক"></div>
+      <div class="field" style="margin-bottom:0"><label>শিক্ষাবর্ষ</label><select id="rYear">${(DB.academicYears||[]).map(y=>`<option>${esc(y)}</option>`).join('')}</select></div>
+      <div class="field" style="margin-bottom:0"><label>পরীক্ষার ধরন</label><select id="rExam">${(DB.examTypes||[]).map(e=>`<option>${esc(e)}</option>`).join('')}</select></div>
+      <div class="field" style="margin-bottom:0"><label>শাখা *</label><select id="rBranch">${(DB.branches||['বালক','বালিকা','হিফজ']).map(b=>`<option>${esc(b)}</option>`).join('')}</select></div>
+      <div class="field" style="margin-bottom:0"><label>মেধা স্থান (Merit)</label><input id="rMerit" placeholder="যেমন: 1"></div>
+      <div class="field full" style="margin-bottom:0"><label>মন্তব্য / Remarks</label><input id="rRemarks" placeholder="The result is excellent..."></div>
+    </div>
+    <div style="margin-top:20px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+        <strong style="color:var(--green-800);font-size:1rem">বিষয়ভিত্তিক নম্বর</strong>
+        <button class="btn btn-outline btn-sm" onclick="addSubjectRow()">➕ বিষয় যোগ</button>
+      </div>
+      <div id="subjRows"></div>
+    </div>
+    <button class="btn btn-primary" style="margin-top:18px" onclick="addResult()">💾 সংরক্ষণ</button>
+  </div>
+  <div class="admin-card">
+    <h4>📋 ফলাফল তালিকা (${bnNum((DB.results||[]).length)})</h4>
+    <div class="tbl-wrap">
+      <table class="admin-tbl">
+        <thead><tr><th>নাম</th><th>শ্রেণি</th><th>শাখা</th><th>আইডি</th><th>মোট</th><th>গ্রেড</th><th>ফলাফল</th><th>অ্যাকশন</th></tr></thead>
+        <tbody>
+          ${(DB.results||[]).length ? DB.results.map(r => {
+            const c = calcResult(r);
+            return `<tr>
+              <td>${esc(r.studentName)}</td>
+              <td>${esc(r.class)}</td>
+              <td>${esc(r.branch||'—')}</td>
+              <td>${esc(r.studentId||r.roll)}</td>
+              <td>${bnNum(c.total)}/${bnNum(c.full)}</td>
+              <td style="color:${c.color};font-weight:800">${c.grade}</td>
+              <td style="color:${c.pass?'#0b6b4b':'#a52833'};font-weight:700">${c.pass?'উত্তীর্ণ':'অকৃতকার্য'}</td>
+              <td><div class="row-actions">
+                <button class="mini-btn mini-edit" onclick="editResult('${r.id}')">✏️</button>
+                <button class="mini-btn mini-del" onclick="delResult('${r.id}')">🗑️</button>
+              </div></td>
+            </tr>`;
+          }).join('') : '<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:26px">কোনো ফলাফল নেই</td></tr>'}
+        </tbody>
+      </table>
+    </div>
+  </div>`;
+}
+function addSubjectRow(name='', full=100, obtained='') {
+  const box = document.getElementById('subjRows'); if (!box) return;
+  const id = 'sr' + (subjCounter++);
+  const div = document.createElement('div');
+  div.className = 'marks-editor'; div.id = id;
+  div.innerHTML = `
+    <input placeholder="বিষয়ের নাম" value="${esc(name)}" data-k="name">
+    <input type="number" placeholder="পূর্ণ" value="${full}" data-k="full" min="1">
+    <input type="number" placeholder="প্রাপ্ত" value="${obtained}" data-k="obtained" min="0">
+    <button class="del" onclick="document.getElementById('${id}').remove()">✕</button>
+  `;
+  box.appendChild(div);
+}
+function addResult() {
+  const name = document.getElementById('rName').value.trim();
+  const sid  = (document.getElementById('rStudentId')||{}).value?.trim() || '';
+  const roll = document.getElementById('rRoll').value.trim();
+  const cls  = document.getElementById('rClass').value;
+  if (!name || (!sid && !roll) || !cls) { toast('নাম, আইডি/রোল ও শ্রেণি দিন', 'err'); return; }
+  const subjects = [];
+  document.querySelectorAll('#subjRows .marks-editor').forEach(r => {
+    const n = r.querySelector('[data-k="name"]').value.trim();
+    const f = Number(r.querySelector('[data-k="full"]').value) || 0;
+    const o = Number(r.querySelector('[data-k="obtained"]').value) || 0;
+    if (n) subjects.push({name:n, full:f, obtained:o});
+  });
+  if (!subjects.length) { toast('অন্তত একটি বিষয় যোগ করুন', 'err'); return; }
+  DB.results.push({
+    id: uid('r'), studentName: name,
+    fatherName: document.getElementById('rFather').value.trim(),
+    class: cls,
+    studentId: sid || roll,
+    roll: roll || sid,
+    year: document.getElementById('rYear').value,
+    examType: document.getElementById('rExam').value,
+    branch: (document.getElementById('rBranch')||{}).value || 'বালক',
+    meritPosition: document.getElementById('rMerit').value.trim(),
+    remarks: document.getElementById('rRemarks').value.trim(),
+    subjects
+  });
+  saveDB(); renderAdmin(); toast('সংরক্ষিত ✓');
+}
+function delResult(id) {
+  if (!confirm('মুছে ফেলতে চান?')) return;
+  DB.results = DB.results.filter(r => r.id !== id);
+  saveDB(); renderAdmin(); toast('মুছে ফেলা হয়েছে');
+}
+function editResult(id) {
+  const r = DB.results.find(x => x.id === id); if (!r) return;
+  const subjHtml = (r.subjects || []).map(s => `
+    <div class="marks-editor">
+      <input value="${esc(s.name)}" data-k="name">
+      <input type="number" value="${s.full}" data-k="full">
+      <input type="number" value="${s.obtained}" data-k="obtained">
+      <button class="del" onclick="this.parentNode.remove()">✕</button>
+    </div>
+  `).join('');
+  openEdit('ফলাফল সম্পাদনা', `
+    <div class="field"><label>নাম</label><input id="eName" value="${esc(r.studentName)}"></div>
+    <div class="field"><label>পিতার নাম</label><input id="eFather" value="${esc(r.fatherName||'')}"></div>
+    <div class="field"><label>শ্রেণি</label><select id="eClass">${(DB.classes||[]).map(c=>`<option ${c===r.class?'selected':''}>${esc(c)}</option>`).join('')}</select></div>
+    <div class="field"><label>আইডি</label><input id="eStudentId" value="${esc(r.studentId||r.roll||'')}"></div>
+    <div class="field"><label>রোল</label><input id="eRoll" value="${esc(r.roll||'')}"></div>
+    <div class="field"><label>শিক্ষাবর্ষ</label><select id="eYear">${(DB.academicYears||[]).map(y=>`<option ${y===r.year?'selected':''}>${esc(y)}</option>`).join('')}</select></div>
+    <div class="field"><label>শাখা</label><select id="eBranch">${(DB.branches||['বালক','বালিকা','হিফজ']).map(b=>`<option ${b===(r.branch||'')?'selected':''}>${esc(b)}</option>`).join('')}</select></div>
+    <div class="field"><label>মেধা স্থান</label><input id="eMerit" value="${esc(r.meritPosition||'')}"></div>
+    <div class="field"><label>মন্তব্য</label><input id="eRemarks" value="${esc(r.remarks||'')}"></div>
+    <strong style="color:var(--green-800);display:block;margin:14px 0 10px">বিষয়সমূহ</strong>
+    <div id="eSubj">${subjHtml}</div>
+    <button class="btn btn-outline btn-sm" style="margin-top:10px" onclick="addEditSubjRow()">➕ বিষয় যোগ</button>
+  `, () => {
+    r.studentName = document.getElementById('eName').value.trim();
+    r.fatherName = document.getElementById('eFather').value.trim();
+    r.class = document.getElementById('eClass').value;
+    r.studentId = document.getElementById('eStudentId').value.trim();
+    r.roll = document.getElementById('eRoll').value.trim() || r.studentId;
+    r.year = document.getElementById('eYear').value;
+    r.branch = (document.getElementById('eBranch')||{}).value || r.branch;
+    r.meritPosition = document.getElementById('eMerit').value.trim();
+    r.remarks = document.getElementById('eRemarks').value.trim();
+    const subs = [];
+    document.querySelectorAll('#eSubj .marks-editor').forEach(row => {
+      const n = row.querySelector('[data-k="name"]').value.trim();
+      const f = Number(row.querySelector('[data-k="full"]').value) || 0;
+      const o = Number(row.querySelector('[data-k="obtained"]').value) || 0;
+      if (n) subs.push({name:n, full:f, obtained:o});
+    });
+    r.subjects = subs;
+    saveDB(); closeEdit(); renderAdmin(); toast('সংরক্ষিত ✓');
+  });
+}
+function addEditSubjRow() {
+  const box = document.getElementById('eSubj'); if (!box) return;
+  const div = document.createElement('div');
+  div.className = 'marks-editor';
+  div.innerHTML = `<input placeholder="বিষয়" data-k="name"><input type="number" placeholder="পূর্ণ" value="100" data-k="full"><input type="number" placeholder="প্রাপ্ত" data-k="obtained"><button class="del" onclick="this.parentNode.remove()">✕</button>`;
+  box.appendChild(div);
+}
+
+function adminNotices() {
+  return `
+  <h3>নোটিশ ব্যবস্থাপনা</h3>
+  <p class="sub">নোটিশ যোগ, সম্পাদনা · Excel ইমপোর্ট · PDF সংযুক্তি</p>
+  <div class="admin-card">
+    <h4>📥 Excel থেকে ইমপোর্ট</h4>
+    <div class="import-box">
+      <label>
+        <input type="file" accept=".xlsx,.xls,.csv,.txt,text/csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" style="display:none" onchange="handleExcelImport('notices', this)">
+        <div style="font-size:2rem;margin-bottom:6px">📊</div>
+        <div style="font-weight:800;color:var(--green-800)">Excel / CSV ফাইল নির্বাচন করুন</div>
+        <div class="import-hint">কলাম: <code>শিরোনাম</code> <code>তারিখ</code> <code>সংক্ষিপ্ত</code> <code>বিস্তারিত</code> <code>সংযুক্তি</code></div>
+      </label>
+      <div style="text-align:center;margin-top:12px">
+        <button class="btn btn-outline btn-sm" onclick="downloadSampleExcel('notices')">⬇️ স্যাম্পল Excel ডাউনলোড</button>
+      </div>
+    </div>
+  </div>
+  <div class="admin-card">
+    <h4>➕ নতুন নোটিশ</h4>
+    <div class="admin-form-grid">
+      <div class="field full" style="margin-bottom:0"><label>শিরোনাম *</label><input id="nTitle"></div>
+      <div class="field" style="margin-bottom:0"><label>তারিখ *</label><input type="date" id="nDate" value="${new Date().toISOString().slice(0,10)}"></div>
+      <div class="field" style="margin-bottom:0"><label>সংযুক্তি URL</label><input id="nAttach" placeholder="অথবা নিচে PDF আপলোড"></div>
+      <div class="field full" style="margin-bottom:0">
+        <label>📄 PDF সংযুক্তি আপলোড</label>
+        <label class="image-upload-box" style="padding:14px">
+          <input type="file" accept="application/pdf,.pdf" style="display:none" onchange="handlePdfAttachment(this)">
+          <div style="font-weight:700;color:var(--green-800)">PDF নির্বাচন করুন (সর্বোচ্চ ৫MB)</div>
+          <div id="pdfAttachPreview" style="font-size:.85rem;color:var(--muted);margin-top:6px">কোনো ফাইল নেই</div>
+        </label>
+      </div>
+      <div class="field full" style="margin-bottom:0"><label>সংক্ষিপ্ত</label><input id="nSummary"></div>
+      <div class="field full" style="margin-bottom:0"><label>বিস্তারিত</label><textarea id="nBody"></textarea></div>
+      <div class="field full" style="margin-bottom:0"><button class="btn btn-primary" onclick="addNotice()">➕ প্রকাশ করুন</button></div>
+    </div>
+  </div>
+  <div class="admin-card">
+    <h4>📋 নোটিশ তালিকা (${bnNum((DB.notices||[]).length)})</h4>
+    <div class="tbl-wrap">
+      <table class="admin-tbl">
+        <thead><tr><th>শিরোনাম</th><th>তারিখ</th><th>স্ট্যাটাস</th><th>অ্যাকশন</th></tr></thead>
+        <tbody>
+          ${(DB.notices||[]).length ? DB.notices.slice().sort((a,b)=>new Date(b.date)-new Date(a.date)).map(n => `
+            <tr>
+              <td>${esc(n.title)}</td>
+              <td>${fmtDate(n.date)}</td>
+              <td><span class="tag ${n.published?'':'unpublished'}">${n.published?'প্রকাশিত':'অপ্রকাশিত'}</span></td>
+              <td><div class="row-actions">
+                <button class="mini-btn mini-view" onclick="toggleNotice('${n.id}')">${n.published?'আনপাবলিশ':'পাবলিশ'}</button>
+                <button class="mini-btn mini-edit" onclick="editNotice('${n.id}')">✏️</button>
+                <button class="mini-btn mini-del" onclick="delNotice('${n.id}')">🗑️</button>
+              </div></td>
+            </tr>
+          `).join('') : '<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:26px">কোনো নোটিশ নেই</td></tr>'}
+        </tbody>
+      </table>
+    </div>
+  </div>`;
+}
+function addNotice() {
+  const title = document.getElementById('nTitle').value.trim();
+  const date  = document.getElementById('nDate').value;
+  if (!title || !date) { toast('শিরোনাম ও তারিখ দিন', 'err'); return; }
+  let attachment = document.getElementById('nAttach').value.trim();
+  if (window._lastPdfDataUrl) {
+    attachment = window._lastPdfDataUrl;
+    window._lastPdfDataUrl = null;
+    window._lastPdfName = null;
+  }
+  DB.notices.push({
+    id: uid('n'), title, date,
+    summary: document.getElementById('nSummary').value.trim(),
+    body: document.getElementById('nBody').value.trim(),
+    attachment: attachment,
+    published: true
+  });
+  saveDB(); renderAdmin(); toast('প্রকাশিত ✓');
+}
+function toggleNotice(id) {
+  const n = DB.notices.find(x => x.id === id); if (!n) return;
+  n.published = !n.published; saveDB(); renderAdmin();
+  toast(n.published ? 'প্রকাশিত' : 'আনপাবলিশ');
+}
+function delNotice(id) {
+  if (!confirm('মুছে ফেলতে চান?')) return;
+  DB.notices = DB.notices.filter(n => n.id !== id);
+  saveDB(); renderAdmin(); toast('মুছে ফেলা হয়েছে');
+}
+function editNotice(id) {
+  const n = DB.notices.find(x => x.id === id); if (!n) return;
+  openEdit('নোটিশ সম্পাদনা', `
+    <div class="field"><label>শিরোনাম</label><input id="eTitle" value="${esc(n.title)}"></div>
+    <div class="field"><label>তারিখ</label><input type="date" id="eDate" value="${esc(n.date)}"></div>
+    <div class="field"><label>সংযুক্তি URL</label><input id="eAttach" value="${esc(n.attachment||'')}"></div>
+    <div class="field"><label>সংক্ষিপ্ত</label><input id="eSummary" value="${esc(n.summary||'')}"></div>
+    <div class="field"><label>বিস্তারিত</label><textarea id="eBody">${esc(n.body||'')}</textarea></div>
+  `, () => {
+    n.title = document.getElementById('eTitle').value.trim();
+    n.date = document.getElementById('eDate').value;
+    n.attachment = document.getElementById('eAttach').value.trim();
+    n.summary = document.getElementById('eSummary').value.trim();
+    n.body = document.getElementById('eBody').value.trim();
+    saveDB(); closeEdit(); renderAdmin(); toast('সংরক্ষিত ✓');
+  });
+}
+
+function adminClasses() {
+  return `
+  <h3>শ্রেণি, বছর ও পরীক্ষার ধরন</h3>
+  <p class="sub">এই তালিকাগুলো ফলাফল সিস্টেমে ব্যবহৃত হবে</p>
+  <div class="admin-card">
+    <h4>🏫 শ্রেণি ও বিভাগ <button class="mini-btn mini-edit" onclick="addSimple('classes','নতুন শ্রেণি')">➕ যোগ</button></h4>
+    <div>${(DB.classes||[]).map((c,i) => `
+      <div style="display:flex;gap:8px;margin-bottom:8px">
+        <input value="${esc(c)}" onchange="DB.classes[${i}]=this.value;saveDB()" style="flex:1;padding:10px 14px;border:2px solid var(--border);border-radius:10px">
+        <button class="mini-btn mini-del" onclick="delSimple('classes',${i})">✕</button>
+      </div>`).join('')}</div>
+  </div>
+  <div class="admin-card">
+    <h4>📅 শিক্ষাবর্ষ <button class="mini-btn mini-edit" onclick="addSimple('academicYears','২০২৭')">➕ যোগ</button></h4>
+    <div>${(DB.academicYears||[]).map((c,i) => `
+      <div style="display:flex;gap:8px;margin-bottom:8px">
+        <input value="${esc(c)}" onchange="DB.academicYears[${i}]=this.value;saveDB()" style="flex:1;padding:10px 14px;border:2px solid var(--border);border-radius:10px">
+        <button class="mini-btn mini-del" onclick="delSimple('academicYears',${i})">✕</button>
+      </div>`).join('')}</div>
+  </div>
+  <div class="admin-card">
+    <h4>📝 পরীক্ষার ধরন <button class="mini-btn mini-edit" onclick="addSimple('examTypes','নতুন পরীক্ষা')">➕ যোগ</button></h4>
+    <div>${(DB.examTypes||[]).map((c,i) => `
+      <div style="display:flex;gap:8px;margin-bottom:8px">
+        <input value="${esc(c)}" onchange="DB.examTypes[${i}]=this.value;saveDB()" style="flex:1;padding:10px 14px;border:2px solid var(--border);border-radius:10px">
+        <button class="mini-btn mini-del" onclick="delSimple('examTypes',${i})">✕</button>
+      </div>`).join('')}</div>
+  </div>`;
+}
+function addSimple(key, def) { DB[key].push(def); saveDB(); renderAdmin(); toast('যোগ ✓'); }
+function delSimple(key, i) { DB[key].splice(i,1); saveDB(); renderAdmin(); toast('মুছে ফেলা হয়েছে'); }
+
+function adminAdmission() {
+  const a = DB.config.admissionInfo || {};
+  const c = DB.config;
+  return `
+  <h3>ভর্তি তথ্য</h3>
+  <p class="sub">ভর্তি সংক্রান্ত তথ্য ও ব্যানার পরিবর্তন করুন</p>
+  <div class="admin-card">
+    <h4>🎉 ভর্তি ব্যানার</h4>
+    <div class="field"><label>ভর্তি নোটিশ</label><input id="aiBanner" value="${esc(c.admissionNotice||'')}"></div>
+    <div class="field"><label>শুরুর তারিখ</label><input id="aiStart" value="${esc(c.admissionStartDate||'')}"></div>
+    <div class="field"><label>বছর</label><input id="aiYear" value="${esc(c.admissionYear||'')}"></div>
+    <div class="field"><label>Badge টেক্সট</label><input id="aiBadge" value="${esc(c.noticeBadge||'')}"></div>
+    <button class="btn btn-primary btn-sm" onclick="saveBanner()">💾 ব্যানার সংরক্ষণ</button>
+  </div>
+  <div class="admin-card">
+    <h4>📝 ভর্তি তথ্য সেকশন</h4>
+    <div class="field"><label>ভর্তি কার্যক্রম</label><textarea id="aiIntro">${esc(a.intro||'')}</textarea></div>
+    <div class="field"><label>যোগ্যতা</label><textarea id="aiElig">${esc(a.eligibility||'')}</textarea></div>
+    <div class="field"><label>কাগজপত্র</label><textarea id="aiDocs">${esc(a.documents||'')}</textarea></div>
+    <div class="field"><label>গুরুত্বপূর্ণ তথ্য</label><textarea id="aiImp">${esc(a.important||'')}</textarea></div>
+    <div class="field"><label>বিশেষ দ্রষ্টব্য</label><textarea id="aiNote">${esc(a.note||'')}</textarea></div>
+    <button class="btn btn-primary" onclick="saveAdmission()">💾 সংরক্ষণ</button>
+  </div>`;
+}
+function saveBanner() {
+  DB.config.admissionNotice = document.getElementById('aiBanner').value.trim();
+  DB.config.admissionStartDate = document.getElementById('aiStart').value.trim();
+  DB.config.admissionYear = document.getElementById('aiYear').value.trim();
+  DB.config.noticeBadge = document.getElementById('aiBadge').value.trim();
+  saveDB(); toast('ব্যানার সংরক্ষিত ✓');
+}
+function saveAdmission() {
+  DB.config.admissionInfo = {
+    intro: document.getElementById('aiIntro').value.trim(),
+    eligibility: document.getElementById('aiElig').value.trim(),
+    documents: document.getElementById('aiDocs').value.trim(),
+    important: document.getElementById('aiImp').value.trim(),
+    note: document.getElementById('aiNote').value.trim()
+  };
+  saveDB(); toast('সংরক্ষিত ✓');
+}
+
+function adminGrading() {
+  return `
+  <h3>গ্রেডিং সিস্টেম</h3>
+  <p class="sub">গ্রেড, GPA ও পাস মার্ক কনফিগার করুন</p>
+  <div class="admin-card">
+    <div class="field" style="max-width:300px"><label>পাস মার্ক</label><input type="number" id="passMark" value="${DB.passMark}"></div>
+    <h4 style="margin-top:14px">গ্রেড তালিকা <button class="mini-btn mini-edit" onclick="addGrade()">➕ যোগ</button></h4>
+    <div class="tbl-wrap">
+      <table class="admin-tbl">
+        <thead><tr><th>সর্বনিম্ন</th><th>সর্বোচ্চ</th><th>গ্রেড</th><th>GPA</th><th>রঙ</th><th></th></tr></thead>
+        <tbody>
+          ${(DB.grading||[]).map((g,i) => `
+            <tr>
+              <td><input type="number" value="${g.min}" onchange="DB.grading[${i}].min=+this.value;saveDB()" style="width:70px;padding:6px;border:2px solid var(--border);border-radius:8px"></td>
+              <td><input type="number" value="${g.max}" onchange="DB.grading[${i}].max=+this.value;saveDB()" style="width:70px;padding:6px;border:2px solid var(--border);border-radius:8px"></td>
+              <td><input type="text" value="${esc(g.grade)}" onchange="DB.grading[${i}].grade=this.value;saveDB()" style="width:60px;padding:6px;border:2px solid var(--border);border-radius:8px"></td>
+              <td><input type="number" step="0.1" value="${g.gpa}" onchange="DB.grading[${i}].gpa=+this.value;saveDB()" style="width:70px;padding:6px;border:2px solid var(--border);border-radius:8px"></td>
+              <td><input type="color" value="${g.color}" onchange="DB.grading[${i}].color=this.value;saveDB()" style="width:48px;height:36px;padding:2px;border-radius:8px;border:2px solid var(--border)"></td>
+              <td><button class="mini-btn mini-del" onclick="delGrade(${i})">✕</button></td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>
+    <button class="btn btn-primary" style="margin-top:16px" onclick="savePassMark()">💾 পাস মার্ক সংরক্ষণ</button>
+  </div>`;
+}
+function addGrade() { DB.grading.push({min:0,max:0,grade:'-',gpa:0,color:'#999999'}); saveDB(); renderAdmin(); }
+function delGrade(i) { DB.grading.splice(i,1); saveDB(); renderAdmin(); toast('মুছে ফেলা হয়েছে'); }
+function savePassMark() {
+  const v = Number(document.getElementById('passMark').value);
+  if (isNaN(v) || v < 0) { toast('সঠিক পাস মার্ক দিন', 'err'); return; }
+  DB.passMark = v; saveDB(); toast('সংরক্ষিত ✓');
+}
+
+function saveUiPrefs() {
+  if (!DB.ui) DB.ui = {};
+  DB.ui.lang = document.getElementById('uiLang').value;
+  DB.ui.showCredit = document.getElementById('uiCredit').value === '1';
+  // save without cloud loop issues
+  try { localStorage.setItem(DB_KEY, JSON.stringify(DB)); } catch(e){}
+  toast('সংরক্ষিত ✓ — পেজ রিলোড হলে দেখাবে', 'gold');
+}
+
+async function startCloudSync() {
+  try {
+    toast('ক্লাউড সিঙ্ক তৈরি হচ্ছে...', 'gold');
+    const id = await cloudCreate();
+    renderAdmin();
+    toast('মাল্টি-ডিভাইস চালু ✓ Sync ID কপি করে অন্য ফোনে দিন', 'gold');
+    const el = document.getElementById('cloudIdBox');
+    if (el) { el.select(); }
+  } catch (e) {
+    toast('সিঙ্ক চালু ব্যর্থ: ' + (e.message || 'নেটওয়ার্ক সমস্যা'), 'err');
+  }
+}
+
+async function joinCloudSync() {
+  const id = (document.getElementById('joinCloudId') || {}).value || '';
+  try {
+    toast('ক্লাউড থেকে লোড হচ্ছে...', 'gold');
+    await cloudConnect(id.trim());
+    renderAdmin();
+    toast('সংযুক্ত ✓ অন্য ফোনের ডেটা এসেছে', 'gold');
+  } catch (e) {
+    toast('সংযোগ ব্যর্থ: ' + (e.message || ''), 'err');
+  }
+}
+
+async function pullCloudNow() {
+  try {
+    toast('আপডেট টানা হচ্ছে...', 'gold');
+    const ok = await cloudPull(false);
+    if (ok) renderAdmin();
+  } catch (e) {
+    toast('টানা ব্যর্থ', 'err');
+  }
+}
+
+function copyCloudId() {
+  const id = (DB.ui && DB.ui.cloudId) || '';
+  if (!id) { toast('আগে সিঙ্ক চালু করুন', 'err'); return; }
+  navigator.clipboard.writeText(id).then(() => toast('Sync ID কপি হয়েছে ✓', 'gold'))
+    .catch(() => {
+      const t = document.getElementById('cloudIdBox');
+      if (t) { t.select(); document.execCommand('copy'); toast('কপি হয়েছে', 'gold'); }
+    });
+}
+
+function disableCloudSync() {
+  if (!DB.ui) DB.ui = {};
+  DB.ui.cloudEnabled = false;
+  // keep cloudId so can re-enable
+  try { localStorage.setItem(DB_KEY, JSON.stringify(DB)); } catch(e){}
+  renderAdmin();
+  toast('অটো-সিঙ্ক বন্ধ (ID সংরক্ষিত)', 'gold');
+}
+
+function adminBackup() {
+  const showCredit = !(DB.ui && DB.ui.showCredit === false);
+  const lang = (DB.ui && DB.ui.lang) || 'bn';
+  const cloudId = (DB.ui && DB.ui.cloudId) || '';
+  const cloudOn = !!(DB.ui && DB.ui.cloudEnabled && cloudId);
+  const lastSync = (DB.ui && DB.ui.lastCloudSync) ? new Date(DB.ui.lastCloudSync).toLocaleString('bn-BD') : '—';
+  return `
+  <h3>ব্যাকআপ ও রিস্টোর</h3>
+  <p class="sub">মাল্টি-ডিভাইস সিঙ্ক · JSON ব্যাকআপ · ভাষা সেটিং</p>
+
+  <div class="admin-card" style="border:2px solid var(--gold-400)">
+    <h4>📱 মাল্টি-ডিভাইস সিঙ্ক (সব ফোনে একই ডেটা)</h4>
+    <p style="font-size:.88rem;color:var(--muted);margin-bottom:12px;line-height:1.55">
+      সমস্যা: এক ফোনে যোগ করলে অন্য ফোনে দেখা যেত না — কারণ ডেটা শুধু ওই ফোনের ব্রাউজারে থাকত।<br>
+      <strong>সমাধান:</strong> নিচে সিঙ্ক চালু করুন → Sync ID অন্য ফোনে দিয়ে সংযুক্ত হন → দুই ফোনেই একই ডেটা দেখাবে।
+    </p>
+    ${cloudOn ? `
+      <div class="alert alert-success" style="margin-bottom:12px">
+        <span>✅</span>
+        <div><strong>সিঙ্ক চালু আছে</strong><br>শেষ আপডেট: ${esc(lastSync)}</div>
+      </div>
+      <div class="field"><label>আপনার Sync ID (অন্য ফোনে দিন)</label>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <input id="cloudIdBox" value="${esc(cloudId)}" readonly style="flex:1;font-family:monospace;font-weight:700">
+          <button class="btn btn-gold btn-sm" onclick="copyCloudId()">📋 কপি</button>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
+        <button class="btn btn-primary btn-sm" onclick="pullCloudNow()">⬇️ এখনই আপডেট নিন</button>
+        <button class="btn btn-outline btn-sm" onclick="disableCloudSync()">⏸ অটো-সিঙ্ক বন্ধ</button>
+      </div>
+    ` : `
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px">
+        <button class="btn btn-primary" onclick="startCloudSync()">🚀 নতুন সিঙ্ক চালু করুন (প্রথম ফোন)</button>
+      </div>
+      <div class="field"><label>অথবা অন্য ফোনের Sync ID দিয়ে যোগ দিন</label>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <input id="joinCloudId" placeholder="Sync ID পেস্ট করুন" style="flex:1;font-family:monospace">
+          <button class="btn btn-gold" onclick="joinCloudSync()">🔗 সংযুক্ত হন</button>
+        </div>
+      </div>
+      ${cloudId ? `<p style="font-size:.82rem;color:var(--muted);margin-top:8px">পুরনো ID: <code>${esc(cloudId)}</code> — আবার চালু করতে উপরের বক্সে পেস্ট করে সংযুক্ত হন</p>` : ''}
+    `}
+  </div>
+
+  <div class="admin-card">
+    <h4>🌐 ভাষা ও ক্রেডিট</h4>
+    <div class="admin-form-grid">
+      <div class="field" style="margin-bottom:0">
+        <label>সাইটের ভাষা</label>
+        <select id="uiLang">
+          <option value="bn" ${lang==='bn'?'selected':''}>বাংলা</option>
+          <option value="en" ${lang==='en'?'selected':''}>English</option>
+        </select>
+      </div>
+      <div class="field" style="margin-bottom:0">
+        <label>নিচে "Created By" দেখাবে?</label>
+        <select id="uiCredit">
+          <option value="1" ${showCredit?'selected':''}>হ্যাঁ — ছোট সিগনেচার</option>
+          <option value="0" ${!showCredit?'selected':''}>না — লুকানো</option>
+        </select>
+      </div>
+    </div>
+    <button class="btn btn-primary btn-sm" style="margin-top:12px" onclick="saveUiPrefs()">💾 সংরক্ষণ</button>
+  </div>
+  <div class="admin-card">
+    <h4>💾 ব্যাকআপ ডাউনলোড</h4>
+    <p style="font-size:.9rem;color:var(--muted);margin-bottom:14px">সব তথ্য একটি ফাইলে সংরক্ষণ করুন — অন্য ডিভাইসে ব্যবহার করতে পারবেন।</p>
+    <button class="btn btn-primary" onclick="downloadBackup()">⬇️ ডাউনলোড</button>
+  </div>
+  <div class="admin-card">
+    <h4>📤 রিস্টোর</h4>
+    <p style="font-size:.9rem;color:var(--muted);margin-bottom:14px">পূর্বে ডাউনলোড করা JSON ফাইল আপলোড করুন।</p>
+    <input type="file" accept=".json" onchange="restoreBackup(event)" style="padding:12px;border:2px dashed var(--border);border-radius:12px;width:100%">
+  </div>
+  <div class="admin-card" style="border-color:rgba(192,57,43,.3)">
+    <h4 style="color:#a52833">⚠️ ডেঞ্জার জোন</h4>
+    <p style="font-size:.9rem;color:var(--muted);margin-bottom:14px">সব ডেটা মুছে ফেলে ওয়েবসাইট খালি অবস্থায় ফিরিয়ে নিন।</p>
+    <button class="btn btn-danger" onclick="resetAll()">🗑️ সব ডেটা মুছুন</button>
+  </div>`;
+}
+function downloadBackup() {
+  const data = JSON.stringify(DB, null, 2);
+  const blob = new Blob([data], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'madrasa-backup-' + new Date().toISOString().slice(0,10) + '.json';
+  a.click();
+  URL.revokeObjectURL(url);
+  toast('ডাউনলোড ✓');
+}
+function restoreBackup(e) {
+  const file = e.target.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try {
+      const data = JSON.parse(ev.target.result);
+      if (!data.config) throw new Error('invalid');
+      if (!confirm('বর্তমান সব ডেটা প্রতিস্থাপিত হবে। নিশ্চিত?')) return;
+      DB = data;
+      saveDB(); renderAdmin(); toast('রিস্টোর ✓', 'gold');
+    } catch (err) { toast('ভুল ফাইল', 'err'); }
+  };
+  reader.readAsText(file);
+}
+function resetAll() {
+  if (!confirm('সব ডেটা মুছে ফেলতে চান?')) return;
+  if (!confirm('আবার নিশ্চিত করুন — সব হারিয়ে যাবে।')) return;
+  DB = JSON.parse(JSON.stringify(defaultDB));
+  saveDB(); renderAdmin(); toast('রিসেট সম্পন্ন', 'err');
+}
+
+function openEdit(title, bodyHtml, onSave) {
+  document.getElementById('editTitle').textContent = title;
+  document.getElementById('editBody').innerHTML = bodyHtml;
+  editSaveCallback = onSave;
+  document.getElementById('editOverlay').classList.add('open');
+  document.getElementById('editSaveBtn').onclick = () => {
+    if (editSaveCallback) editSaveCallback();
+  };
+}
+function closeEdit() {
+  document.getElementById('editOverlay').classList.remove('open');
+  editSaveCallback = null;
+}
+document.getElementById('editOverlay').addEventListener('click', e => {
+  if (e.target.id === 'editOverlay') closeEdit();
+});
+
+// Init
+if (isLoggedIn()) showAdmin();
+else showLogin();
+</script>
+</body>
+</html>
